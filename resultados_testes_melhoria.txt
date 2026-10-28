@@ -1,0 +1,12 @@
+TESTES DE REGRESSÃO — RECOMOVIE AI
+
+[PASSOU] Filme válido Toy Story (ID 1): 10 recomendacoes
+[PASSOU] ID inexistente: 0 recomendacoes
+[PASSOU] ID string: 0 recomendacoes
+[PASSOU] ID None: 0 recomendacoes
+[PASSOU] ID float não inteiro: 0 recomendacoes
+[PASSOU] ID negativo: 0 recomendacoes
+[PASSOU] Quantidade zero: 0 recomendacoes
+[PASSOU] Mínimo de avaliações negativo: 0 recomendacoes
+[PASSOU] Filme sem gêneros (Encounter in the Third Dimension (1999)): 0 recomendacoes
+[INFO] Coerência de gênero (amostra de 30 filmes): 299/299 (100.0%) com gênero compartilhado; 0 filmes sem resultado

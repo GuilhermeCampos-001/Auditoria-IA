@@ -1,0 +1,301 @@
+################################################################################
+#  RELATORIO DE AUDITORIA -- RECOMOVIE AI
+#  Data: 28/10/2026 00:47:34
+#  Sistema: Recomendacao de filmes via K-Means + Similaridade de Cosseno
+#  Modelo: MiniBatchKMeans (k=150, batch_size=2048)
+#  Dados totais: 84432 filmes | 18 generos
+#  Treino: 84332 filmes | Teste: 100 filmes
+#  Separacao: 50 filmes populares + 50 filmes aleatorios retidos
+################################################################################
+
+
+================================================================================
+ MISSAO 1 -- DESCOBRINDO QUANDO A IA ERRA
+================================================================================
+
+Contexto: Os 100 filmes de teste NAO participaram do treinamento do K-Means.
+Foram atribuidos a clusters via model.predict() e testados contra filmes de treino.
+'Erro' = recomendacao incoerente (sem generos em comum com o filme de teste).
+
+
+------------------------------------------------------------
+ Teste 1.1 -- Coerencia de genero nas recomendacoes (100 filmes)
+------------------------------------------------------------
+  RESULTADOS GLOBAIS (100 filmes de teste):
+  Total de recomendacoes geradas: 932
+  Recomendacoes coerentes (>=1 genero em comum): 932
+  Recomendacoes incoerentes (0 generos em comum): 0
+  Taxa de coerencia global: 100.0%
+  Filmes sem recomendacao: 6
+
+  Nenhuma recomendacao completamente incoerente encontrada!
+
+------------------------------------------------------------
+ Teste 1.1b -- Filmes de teste com pior coerencia
+------------------------------------------------------------
+  Toy Story (1995)                              | Coerencia: 100.0% (10/10) | Generos: Adventure, Animation, Children's, Comedy, Fantasy
+  Twelve Monkeys (a.k.a. 12 Monkeys) (1995)     | Coerencia: 100.0% (10/10) | Generos: Mystery, Sci-Fi, Thriller
+  Seven (a.k.a. Se7en) (1995)                   | Coerencia: 100.0% (10/10) | Generos: Mystery, Thriller
+  Usual Suspects, The (1995)                    | Coerencia: 100.0% (10/10) | Generos: Crime, Mystery, Thriller
+  Braveheart (1995)                             | Coerencia: 100.0% (10/10) | Generos: Action, Drama, War
+
+------------------------------------------------------------
+ Teste 1.2 -- Metricas de qualidade da clusterizacao (treino)
+------------------------------------------------------------
+  Silhouette Score     : 0.3969  (ideal: proximo de 1.0)
+  Davies-Bouldin Index : 1.1659  (ideal: proximo de 0.0)
+  Calinski-Harabasz    : 3501.04  (quanto maior, melhor)
+  [!] Silhouette Score moderado -- agrupamento razoavel, com margem para melhoria.
+
+------------------------------------------------------------
+ Teste 1.3 -- Investigando caracteristicas comuns nos erros
+------------------------------------------------------------
+  Sem erros para investigar -- o modelo foi coerente em todos os 100 testes.
+
+================================================================================
+ MISSAO 2 -- TENTANDO QUEBRAR A APLICACAO
+================================================================================
+
+Realizamos 5 testes de estresse sobre o motor de recomendacao.
+Todos os testes usam a funcao recomendar_do_treino (dados separados).
+
+
+------------------------------------------------------------
+ Teste 2.1 -- Valores muito altos ou baixos (movieId = 999999999)
+------------------------------------------------------------
+  Entrada: movieId = 999999999
+  Resultado: PASSOU -- Retornou vazio para ID inexistente.
+  Esperado: Retornar vazio sem erro.
+
+------------------------------------------------------------
+ Teste 2.2 -- Valores impossiveis ou invalidos
+------------------------------------------------------------
+  Entrada: string 'abcdef' -> PASSOU -- Retornou vazio sem erro.
+  Entrada: None -> PASSOU -- Retornou vazio sem erro.
+  Entrada: numero negativo -1 -> PASSOU -- Retornou vazio sem erro.
+  Entrada: float 3.14 -> PASSOU -- Retornou vazio sem erro.
+
+------------------------------------------------------------
+ Teste 2.3 -- Campos vazios ou informacoes ausentes
+------------------------------------------------------------
+  Busca vazio '' -> PASSOU -- Retornou vazio para busca sem termo.
+  Busca espacos '   ' -> PASSOU -- Retornou vazio para busca sem termo.
+
+------------------------------------------------------------
+ Teste 2.4 -- Combinacao incomum (filme raro do conjunto de teste)
+------------------------------------------------------------
+  INFO -- Filme 'Bosko's Parlor Pranks (1934)' (1 aval.) -- retornou 10 recomendacoes.
+
+------------------------------------------------------------
+ Teste 2.5 -- Pequena alteracao em entrada valida
+------------------------------------------------------------
+  Filme A: Toy Story (1995) (movieId=1) -> 5 recomendacoes
+  Filme B: Twelve Monkeys (a.k.a. 12 Monkeys) (1995) (movieId=32) -> 5 recomendacoes
+  Sobreposicao: 0/5 filmes em comum
+  [!] Resultados completamente diferentes.
+
+------------------------------------------------------------
+ Resumo dos Testes de Estresse
+------------------------------------------------------------
+  [OK] [PASSOU ] 2.1 - ID inexistente (999999999)
+  [OK] [PASSOU ] 2.2 - string 'abcdef'
+  [OK] [PASSOU ] 2.2 - None
+  [OK] [PASSOU ] 2.2 - numero negativo -1
+  [OK] [PASSOU ] 2.2 - float 3.14
+  [OK] [PASSOU ] 2.3 - Busca vazio ''
+  [OK] [PASSOU ] 2.3 - Busca espacos '   '
+  [!] [INFO   ] 2.4 - Filme raro
+  [!] [INFO   ] 2.5 - Comparacao de filmes de teste
+
+================================================================================
+ MISSAO 3 -- INVESTIGANDO O QUE INFLUENCIA AS PREVISOES
+================================================================================
+
+Investigamos como alterar cada feature individualmente afeta a similaridade
+de cosseno entre um filme de TESTE e os candidatos de TREINO.
+Isso revela quais atributos mais influenciam a recomendacao do modelo.
+
+
+------------------------------------------------------------
+ Parte A -- Investigando uma previsao especifica
+------------------------------------------------------------
+  Filme base (do conjunto de TESTE): Shawshank Redemption, The (1994)
+  Generos ativos: Crime, Drama
+  Nota media: 4.4679
+  Cluster atribuido (via predict): 20
+
+  Recomendacoes originais (top 5):
+    -> Godfather: Part II, The (1974) | Sim: 99.96% | Nota: 4.38
+    -> American History X (1998) | Sim: 99.90% | Nota: 4.33
+    -> The Night Of (2016) | Sim: 99.85% | Nota: 4.30
+    -> Goodfellas (1990) | Sim: 99.79% | Nota: 4.27
+    -> On the Waterfront (1954) | Sim: 99.62% | Nota: 4.20
+
+  Similaridade media original com candidatos de treino: 91.51%
+
+------------------------------------------------------------
+ Experimentos de perturbacao de features
+------------------------------------------------------------
+
+  Atributo alterado                   Original           Novo valor             Sim.media(%)   Variacao  
+  ----------------------------------------------------------------------------------------------------
+  Genero 'Crime' (desligar)           1 (ativo)          0 (desativado)         63.60          -27.90%
+  Genero 'Drama' (desligar)           1 (ativo)          0 (desativado)         63.60          -27.90%
+  Genero 'Action' (ligar)             0 (inativo)        1 (ativado, peso 2x)   78.44          -13.07%
+  Nota media (padronizada)            1.7550             +2 desvios padrao      73.01          -18.50%
+
+------------------------------------------------------------
+ Parte B -- Ranking de influencia dos atributos
+------------------------------------------------------------
+
+  Ranking por impacto absoluto na similaridade media:
+
+  1. Genero 'Crime' (desligar)           | Impacto: -27.90% | ##################################################
+  2. Genero 'Drama' (desligar)           | Impacto: -27.90% | ##################################################
+  3. Nota media (padronizada)            | Impacto: -18.50% | ##################################################
+  4. Genero 'Action' (ligar)             | Impacto: -13.07% | ##################################################
+
+  -> Atributo MAIS influente: Genero 'Crime' (desligar) (variacao: -27.90%)
+  -> Atributo MENOS influente: Genero 'Action' (ligar) (variacao: -13.07%)
+
+  Interpretacao: Os generos sao as features dominantes no modelo.
+  A ponderacao (peso 2x) amplifica sua influencia no calculo de distancia.
+  A nota media padronizada ocupa 1 dimensao contra N dimensoes de genero.
+  Isso explica por que filmes do mesmo genero sao fortemente privilegiados.
+
+
+================================================================================
+ MISSAO 4 -- MELHORANDO A IA
+================================================================================
+
+Problema identificado: filmes sem gêneros conhecidos podiam receber sugestões
+com base em uma similaridade que não representava afinidade temática.
+
+Melhorias integradas em recomendador.py e app.py:
+  - validação de movie_id, quantidade e minimo_avaliacoes;
+  - remoção de '(no genres listed)' das features de gênero;
+  - bloqueio de recomendações para filmes sem gêneros conhecidos;
+  - aviso explícito na interface quando não há dados suficientes.
+
+
+------------------------------------------------------------
+ Testes da versao melhorada vs original
+------------------------------------------------------------
+  movieId valido (1)                  -> [OK] 10 recomendacoes
+  movieId None                        -> [!] Validacao: movie_id nao pode ser None
+  movieId string 'abc'                -> [!] Validacao: movie_id deve ser numerico, recebeu string
+  movieId negativo (-5)               -> [!] Validacao: movie_id negativo: -5
+  movieId float (3.14)                -> [!] Validacao: movie_id deve ser inteiro, recebeu float: 3.14
+  movieId inexistente (999999)        -> [!] Validacao: Nenhuma recomendacao para movieId=999999
+
+------------------------------------------------------------
+ Re-teste dos filmes apos melhoria
+------------------------------------------------------------
+  Kung Fu Elliot (2014)                         -> [OK] 10 recomendacoes
+  Citadel, The (1938)                           -> [OK] 10 recomendacoes
+  Van Nuys Blvd. (1979)                         -> [OK] 10 recomendacoes
+  Battle Creek Brawl (Big Brawl, The) (1980)    -> [OK] 10 recomendacoes
+  Shrek (2001)                                  -> [OK] 10 recomendacoes
+
+  Resultado: os testes confirmam que o núcleo retorna de forma segura para entradas inválidas.
+  A regra para filmes sem gêneros conhecidos também está integrada ao recomendador e à interface.
+
+
+================================================================================
+ MISSAO 5 -- RELATORIO DE AUDITORIA -- PARECER FINAL
+================================================================================
+
+
+------------------------------------------------------------
+ 1. Identificacao do Sistema
+------------------------------------------------------------
+  Sistema: Recomovie AI
+  Problema: Recomendar filmes similares a um filme selecionado.
+  Modelo: MiniBatchKMeans (k=150) + Similaridade de Cosseno.
+  Features: 18 colunas binarias de genero (peso 2x) + nota media padronizada.
+  Base total: 84432 filmes do dataset MovieLens.
+  Separacao: 84332 treino | 100 teste (50 populares + 50 aleatorios).
+  Interface: Streamlit com busca autocompletada e posteres em tempo real.
+
+
+------------------------------------------------------------
+ 2. Erros Encontrados (Missao 1)
+------------------------------------------------------------
+  Nenhuma recomendacao incoerente nos 100 filmes de teste.
+  Taxa de coerencia: 100.0%
+
+  Metricas de qualidade (dados de treino):
+    Silhouette Score: 0.3969
+    Davies-Bouldin:   1.1659
+    Calinski-Harabasz: 3501.04
+
+
+------------------------------------------------------------
+ 3. Testes de Estresse (Missao 2)
+------------------------------------------------------------
+  7/9 testes de estresse passaram sem exceção; casos INFO são observações, não falhas.
+
+  [OK] 2.1 - ID inexistente (999999999): Retornou vazio para ID inexistente.
+  [OK] 2.2 - string 'abcdef': Retornou vazio sem erro.
+  [OK] 2.2 - None: Retornou vazio sem erro.
+  [OK] 2.2 - numero negativo -1: Retornou vazio sem erro.
+  [OK] 2.2 - float 3.14: Retornou vazio sem erro.
+  [OK] 2.3 - Busca vazio '': Retornou vazio para busca sem termo.
+  [OK] 2.3 - Busca espacos '   ': Retornou vazio para busca sem termo.
+  [!] 2.4 - Filme raro: Filme 'Bosko's Parlor Pranks (1934)' (1 aval.) -- retornou 10 recomendacoes.
+  [!] 2.5 - Comparacao de filmes de teste: Toy Story (1995) vs Twelve Monkeys (a.k.a. 12 Monkeys) (1995)
+
+------------------------------------------------------------
+ 4. Influencia dos Atributos (Missao 3)
+------------------------------------------------------------
+  Filme investigado: Shawshank Redemption, The (1994) (conjunto de teste)
+
+    Genero 'Crime' (desligar)           -> Impacto: -27.90%
+    Genero 'Drama' (desligar)           -> Impacto: -27.90%
+    Nota media (padronizada)            -> Impacto: -18.50%
+    Genero 'Action' (ligar)             -> Impacto: -13.07%
+
+  Conclusao: as features de genero (peso 2x) sao as mais influentes.
+  A nota media padronizada tem impacto menor por ser unidimensional.
+
+
+------------------------------------------------------------
+ 5. Melhoria Implementada (Missao 4)
+------------------------------------------------------------
+  Problema: filmes sem gênero conhecido podiam gerar sugestões enganosas.
+  Solução integrada em recomendador.py e app.py:
+    - valida movie_id, quantidade e minimo_avaliacoes;
+    - exclui '(no genres listed)' das features;
+    - não recomenda para filmes sem gêneros conhecidos;
+    - mostra aviso explicativo na interface.
+  Resultado: testes de regressão confirmaram entradas inválidas seguras.
+
+
+------------------------------------------------------------
+ 6. Parecer Final
+------------------------------------------------------------
+  +-----------------------------------------------------------------------+
+  | A aplicacao PODE ser utilizada com confianca em:                       |
+  |  - Recomendacao de filmes populares com muitas avaliacoes (>50)        |
+  |  - Navegacao exploratoria por generos similares                        |
+  |  - Descoberta de filmes dentro do mesmo perfil de genero              |
+  |                                                                       |
+  | A aplicacao NAO deveria ser considerada confiavel em:                  |
+  |  - Filmes com muito poucas avaliacoes (imprevisivel)                  |
+  |  - Recomendacoes inter-genero (o modelo prioriza similaridade intra)  |
+  |  - Filmes sem genero listado ('(no genres listed)')                   |
+  |  - Recomendacoes personalizadas por usuario (modelo content-based)    |
+  +-----------------------------------------------------------------------+
+
+  Veredicto: O Recomovie AI e funcional e robusto para uso exploratorio.
+  O agrupamento K-Means com similaridade de cosseno produz recomendacoes
+  coerentes na maioria dos casos. Mesmo filmes NAO vistos no treinamento
+  recebem recomendacoes validas via predict(), demonstrando generalizacao.
+  Limitacoes: granularidade das features (generos binarios + nota) nao
+  captura nuances como diretor, elenco, periodo ou elementos narrativos.
+
+
+================================================================================
+  RELATORIO SALVO EM: /mnt/data/work/RECOMOVIE.AI-main/AUDITORIA/relatorio_auditoria_detalhado.txt
+================================================================================
+

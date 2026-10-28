@@ -1,0 +1,42 @@
+RELATÓRIO DE AUDITORIA — RECOMOVIE AI
+Data: 28/10/2026
+
+1. IDENTIFICAÇÃO DO SISTEMA
+O Recomovie AI recomenda filmes semelhantes ao título escolhido. Usa MiniBatchKMeans para agrupar filmes e similaridade de cosseno para ordenar recomendações. As features são 18 gêneros binários e a nota média padronizada. A base contém 84.432 filmes.
+
+2. MISSÃO 1 — AVALIAÇÃO EM DADOS RETIDOS
+Foram separados 100 filmes antes do treinamento (50 populares e 50 aleatórios): 84.332 filmes no treino e 100 no teste. O modelo final foi treinado com K=150 e os filmes retidos foram atribuídos aos grupos com predict().
+- Recomendações geradas: 932.
+- Recomendações com pelo menos um gênero em comum: 932 (100%).
+- Filmes sem recomendação: 6.
+- Silhouette: 0,3969; Davies-Bouldin: 1,1659; Calinski-Harabasz: 3501,04.
+Interpretação: não houve recomendação sem gênero compartilhado entre as 932 avaliadas. Essa taxa é apenas uma verificação básica de coerência temática; não prova que cada recomendação seja relevante ou que o modelo seja perfeito. Os seis filmes sem resultado não foram tratados como recomendações corretas.
+
+3. MISSÃO 2 — TESTES DE ESTRESSE
+- ID inexistente, texto, None, número negativo e float não inteiro: retornam resultado vazio sem exceção.
+- Busca vazia ou contendo apenas espaços: não retorna resultados.
+- Filme raro (Bosko's Parlor Pranks, com uma avaliação): ainda pode gerar sugestões se tiver gêneros conhecidos. Isso não prova confiança estatística no filme de origem.
+- Toy Story e Twelve Monkeys geraram listas sem títulos em comum (0/5). Isso é uma observação, não necessariamente uma falha: são filmes de perfis diferentes.
+
+4. MISSÃO 3 — INFLUÊNCIA DAS FEATURES
+Caso analisado: The Shawshank Redemption (1994), gêneros Crime e Drama.
+- Remover Crime: similaridade média caiu 27,90%.
+- Remover Drama: caiu 27,90%.
+- Alterar a nota média em +2 desvios-padrão: caiu 18,50%.
+- Adicionar Action: caiu 13,07%.
+Os gêneros tiveram maior impacto neste exemplo. Esses testes medem a resposta do modelo às alterações escolhidas, não relações causais gerais.
+
+5. MISSÃO 4 — MELHORIAS IMPLEMENTADAS
+- O recomendador valida movie_id, quantidade e mínimo de avaliações e retorna resultado vazio para parâmetros inválidos.
+- A coluna “(no genres listed)” deixou de ser tratada como gênero real.
+- Para filmes sem gêneros conhecidos, o sistema não gera sugestões baseadas apenas na nota; a interface explica o motivo.
+- Foram executados testes de regressão: 8 casos de entrada/parametrização e o caso de filme sem gêneros passaram. Uma amostra exploratória de 30 filmes gerou 299 recomendações avaliadas, todas com pelo menos um gênero compartilhado.
+
+6. ESCOLHA DE K
+Foram comparados K = 60, 75, 80, 90, 100, 125, 150 e 200. K=200 apresentou as melhores métricas internas nesta rodada (Silhouette 0,4177; Davies-Bouldin 1,1089), mas seu menor cluster tinha 38 filmes. K=150 foi escolhido como compromisso: Silhouette 0,3918, Davies-Bouldin 1,1620 e menor cluster de 71 filmes. A escolha não garante a melhor experiência em todos os casos.
+
+7. PARECER FINAL
+O sistema pode ser usado para exploração de filmes com gêneros conhecidos, como ferramenta de descoberta — não como garantia de gosto pessoal. Não deve ser considerado confiável quando faltam metadados, quando se espera personalização por usuário ou quando a similaridade de gênero é tomada como prova definitiva de qualidade. O modelo não considera diretamente enredo, elenco, direção nem histórico individual de preferências.
+
+EVIDÊNCIAS
+O arquivo relatorio_auditoria_detalhado.txt contém os registros completos da execução. resultados_testes_melhoria.txt contém os testes de regressão. comparacao_clusters_ampliada.csv e os gráficos registram a comparação dos valores de K.
